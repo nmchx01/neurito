@@ -92,3 +92,52 @@ Los datos sintéticos actuales no enseñan cuándo una mascota real debe buscar 
 
 - `main.py`: juego, datos sintéticos, red neuronal y controles.
 - `assets/`: ilustraciones de Neurito para sus animaciones.
+
+## Neurito aprende a saltar
+
+Este experimento complementario usa una red neuronal supervisada para decidir cuándo saltar obstáculos. La red recibe distancia, velocidad y tiempo estimado hasta el obstáculo. Aprende con ejemplos sintéticos etiquetados con una regla temporal; no aprende directamente de las colisiones.
+
+### Ejecutar
+
+Con Python 3.12 o posterior y las dependencias del proyecto instaladas:
+
+```bash
+uv sync
+uv run saltar.py
+```
+
+### Controles
+
+| Tecla | Acción |
+|---|---|
+| `1` | Entrenar una época |
+| `2` | Entrenar cien épocas |
+| `3` | Activar o pausar el entrenamiento continuo |
+| `A` | Alternar control automático y manual |
+| `Espacio` | Saltar manualmente |
+| `C` | Reiniciar la pista y los contadores |
+| `R` | Reiniciar la red y los contadores |
+| `Esc` | Salir |
+
+### Experimentos
+
+Registra los resultados de cada prueba. Reinicia el juego y la red cuando corresponda para comparar las configuraciones.
+
+1. Prueba el juego sin entrenar. Anota colisiones y obstáculos esquivados.
+2. Entrena de cien en cien épocas; compara la pérdida, la precisión y el comportamiento.
+3. Cambia `ocultas=12` por `ocultas=3` o `ocultas=24`; compara la generalización.
+4. Modifica la tasa de aprendizaje de `0.8` a `0.01` o `1.2` y estudia la convergencia.
+5. Cambia la ventana de entrenamiento en `etiqueta()` y en la generación de ejemplos positivos. Comprueba si la política resultante es compatible con la física.
+
+| Prueba | Épocas | Pérdida | Precisión de prueba | Choques | Esquivados | Observaciones |
+|---|---:|---:|---:|---:|---:|---|
+| Sin entrenar | 0 | | | | | |
+| Entrenamiento | 100 | | | | | |
+
+### Pregunta central: ¿por qué una red puede clasificar ejemplos con buena precisión y aun así chocar?
+
+La precisión se calcula sobre ejemplos sintéticos de prueba y mide si la red reproduce las etiquetas de la regla, no si evita choques durante la simulación. La regla actual marca como positivo saltar cuando el tiempo estimado hasta el obstáculo está entre 7 y 13 fotogramas. La física depende además del impulso, la gravedad, el tamaño del jugador y del obstáculo, la velocidad y el momento en que empieza el salto. Una predicción correcta según las etiquetas puede, por tanto, iniciar el salto demasiado pronto o demasiado tarde.
+
+La precisión tampoco distingue por sí sola el costo de cada error: decir «esperar» cuando ya era necesario saltar puede acabar en choque, aunque la mayoría de las demás predicciones sean correctas. La política automática solo inicia un salto cuando Neurito está en el suelo. Por eso hay que comparar las métricas de prueba con el comportamiento real y contar choques y obstáculos esquivados. Una precisión alta en ejemplos sintéticos no garantiza una política compatible con la física.
+
+Archivos del experimento: [`saltar.py`](saltar.py), [`salto_modelo.py`](salto_modelo.py), [`salto_juego.py`](salto_juego.py) y [`GUIA_SALTO.md`](GUIA_SALTO.md).
