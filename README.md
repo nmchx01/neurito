@@ -141,3 +141,72 @@ La precisión se calcula sobre ejemplos sintéticos de prueba y mide si la red r
 La precisión tampoco distingue por sí sola el costo de cada error: decir «esperar» cuando ya era necesario saltar puede acabar en choque, aunque la mayoría de las demás predicciones sean correctas. La política automática solo inicia un salto cuando Neurito está en el suelo. Por eso hay que comparar las métricas de prueba con el comportamiento real y contar choques y obstáculos esquivados. Una precisión alta en ejemplos sintéticos no garantiza una política compatible con la física.
 
 Archivos del experimento: [`saltar.py`](saltar.py), [`salto_modelo.py`](salto_modelo.py), [`salto_juego.py`](salto_juego.py) y [`GUIA_SALTO.md`](GUIA_SALTO.md).
+
+### Resultados de las pruebas
+
+Corrida reproducible con semilla 42 para los pesos, 5.000 ejemplos de entrenamiento, 1.500 ejemplos de prueba separados y semilla 19 para la secuencia de obstáculos. Salvo cuando se varía una ventana, las comparaciones usan los mismos conjuntos de datos. Los contadores se obtuvieron ejecutando la política automática junto con `JuegoSalto.actualizar()`; no se abrió la ventana gráfica de Pygame en esta corrida.
+
+#### 1. Sin entrenar y entrenamiento gradual
+
+La prueba inicial terminó en **100 colisiones y 0 obstáculos esquivados** antes de completar 100 encuentros. Para cada checkpoint entrenado se simularon 30 encuentros desde la misma pista inicial.
+
+| Épocas | Pérdida de entrenamiento | Pérdida de prueba | Precisión de prueba | Choques / 30 | Esquivados / 30 |
+|---:|---:|---:|---:|---:|---:|
+| 100 | 0,25917 | 0,26463 | 91,20% | 1 | 29 |
+| 200 | 0,23010 | 0,23504 | 92,00% | 0 | 30 |
+| 300 | 0,20704 | 0,21073 | 92,27% | 0 | 30 |
+| 400 | 0,17769 | 0,17964 | 92,47% | 0 | 30 |
+| 500 | 0,14096 | 0,14102 | 93,93% | 0 | 30 |
+| 600 | 0,10957 | 0,10851 | 96,13% | 0 | 30 |
+| 700 | 0,08895 | 0,08749 | 97,20% | 0 | 30 |
+| 800 | 0,07553 | 0,07393 | 97,60% | 0 | 30 |
+| 900 | 0,06616 | 0,06454 | 97,93% | 0 | 30 |
+| 1.000 | 0,05921 | 0,05761 | 98,00% | 0 | 30 |
+| 1.100 | 0,05380 | 0,05223 | 98,20% | 0 | 30 |
+| 1.200 | 0,04945 | 0,04791 | 98,33% | 0 | 30 |
+
+En esta corrida, 100 épocas ya mejoraron mucho el juego frente a la red sin entrenar; desde 200 épocas no hubo choques en los bloques de 30 encuentros.
+
+#### 2. Tamaño de la capa oculta
+
+Cada configuración se entrenó durante 1.200 épocas con tasa 0,8 y se evaluó en 100 encuentros.
+
+| Neuronas ocultas | Pérdida de prueba | Precisión de prueba | Choques / 100 | Esquivados / 100 |
+|---:|---:|---:|---:|---:|
+| 3 | 0,20440 | 93,60% | 0 | 100 |
+| 12 | 0,04791 | 98,33% | 0 | 100 |
+| 24 | 0,04291 | 98,67% | 0 | 100 |
+
+Con 3 neuronas la red también esquivó los 100 obstáculos de esta prueba, pero clasificó peor el conjunto reservado. Las capas de 12 y 24 generalizaron mejor en estos datos; la diferencia entre ellas fue pequeña.
+
+#### 3. Tasa de aprendizaje
+
+Pérdida y precisión de prueba cada 100 épocas. La última columna muestra el resultado del juego en 100 encuentros al completar 1.200 épocas.
+
+| Tasa | Épocas | Pérdida de prueba | Precisión de prueba | Choques / 100 al final | Esquivados / 100 al final |
+|---:|---:|---:|---:|---:|---:|
+| 0,01 | 100 | 0,64401 | 90,67% | | |
+| 0,01 | 600 | 0,49385 | 86,67% | | |
+| 0,01 | 1.200 | 0,40934 | 87,13% | 100 | 0 |
+| 0,8 | 100 | 0,26463 | 91,20% | | |
+| 0,8 | 600 | 0,10851 | 96,13% | | |
+| 0,8 | 1.200 | 0,04791 | 98,33% | 0 | 100 |
+| 1,2 | 100 | 0,27804 | 89,47% | | |
+| 1,2 | 600 | 0,06872 | 97,07% | | |
+| 1,2 | 1.200 | 0,03276 | 98,93% | 0 | 100 |
+
+La tasa 0,01 convergió lentamente y, tras 1.200 épocas, aún chocó en todos los encuentros simulados pese a una precisión de 87,13%. Las tasas 0,8 y 1,2 aprendieron más rápido en esta corrida; 1,2 no mostró inestabilidad en el rango medido.
+
+#### 4. Compatibilidad de la ventana de etiquetas con la física
+
+Se cambió a la vez el intervalo positivo de generación y la condición de `etiqueta()`. Cada política entrenada se midió en 100 encuentros.
+
+| Ventana (fotogramas hasta el obstáculo) | Pérdida de prueba | Precisión de prueba | Choques / 100 | Esquivados / 100 |
+|---:|---:|---:|---:|---:|
+| 7–13 (base) | 0,04791 | 98,33% | 0 | 100 |
+| 18–24 (salto demasiado temprano) | 0,04520 | 98,00% | 100 | 0 |
+| 25–31 (salto aún más temprano) | 0,04627 | 98,33% | 100 | 0 |
+
+Las ventanas tempranas mantuvieron una precisión cercana al 98%, pero todas las partidas chocaron: la etiqueta se reproducía bien, aunque el salto se iniciaba demasiado pronto para la trayectoria física. Este resultado responde la pregunta central con un ejemplo directo: la precisión no mide compatibilidad física.
+
+Estos resultados corresponden a una corrida determinista con una secuencia de obstáculos y no garantizan el mismo resultado en todas las semillas o configuraciones. La evaluación sí muestra por qué conviene registrar simultáneamente métricas de clasificación y choques del juego.
