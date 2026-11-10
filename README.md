@@ -24,7 +24,7 @@ También puedes instalar las dependencias con `pip install numpy pygame-ce` y ej
 
 En la ventana principal, pulsa **Laberinto 12×12** o la tecla **L**. Neurito debe llegar desde la esquina superior izquierda hasta la comida de la esquina inferior derecha. El tablero muestra las celdas exploradas y anima la ruta final.
 
-Selecciona **BFS**, **DFS** o **A*** con los botones o con las teclas **1**, **2** y **3**. Usa **Espacio** para pausar o continuar, **R** para reiniciar la animación y **Esc** para volver al laboratorio. También puedes abrir este apartado directamente con:
+Al abrir el apartado, el tablero queda quieto y muestra la leyenda y la comparación de resultados. La búsqueda solo comienza al hacer clic en **BFS**, **DFS** o **A***. Usa **Espacio** para pausar o continuar, **R** para reiniciar la búsqueda seleccionada y **Esc** para volver al laboratorio. También puedes abrir este apartado directamente con:
 
 ```bash
 uv run laberinto.py

@@ -146,6 +146,12 @@ def make_maze(seed: int = 16319) -> tuple[tuple[tuple[int, ...], ...], int]:
 
 
 MAZE, MAZE_SEED = make_maze()
+# Results documented for this fixed seed; displaying them does not run a search.
+COMPARISON = {
+    "BFS": (109, 24, 11),
+    "DFS": (80, 66, 29),
+    "A*": (59, 24, 18),
+}
 
 
 class LaberintoVisual:
@@ -156,11 +162,11 @@ class LaberintoVisual:
         self.body_font = body_font
         self.small_font = small_font
         self.tiny_font = tiny_font
-        self.algorithm = "A*"
-        self.result = search(MAZE, self.algorithm)
+        self.algorithm = None
+        self.result = None
         self.expanded_count = 0
         self.path_count = 0
-        self.playing = True
+        self.playing = False
         self.accumulator = 0
         self.back_rect = pygame.Rect(868, 724, 252, 42)
         self.buttons = {
@@ -170,20 +176,21 @@ class LaberintoVisual:
         self.restart()
 
     def restart(self):
-        self.result = search(MAZE, self.algorithm)
         self.expanded_count = 0
         self.path_count = 0
         self.accumulator = 0
+        if self.algorithm is None:
+            self.result = None
+            self.playing = False
+            return
+        self.result = search(MAZE, self.algorithm)
         self.playing = True
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                 return "home"
-            if event.key in (pygame.K_1, pygame.K_2, pygame.K_3):
-                self.algorithm = ALGORITHMS[event.key - pygame.K_1]
-                self.restart()
-            elif event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and self.result is not None:
                 self.playing = not self.playing
             elif event.key == pygame.K_r:
                 self.restart()
@@ -198,7 +205,7 @@ class LaberintoVisual:
         return None
 
     def update(self, elapsed_ms: int):
-        if not self.playing:
+        if not self.playing or self.result is None:
             return
         self.accumulator += elapsed_ms
         while self.accumulator >= STEP_MS:
@@ -224,9 +231,10 @@ class LaberintoVisual:
         pygame.draw.rect(surface, PAPER, grid_rect, border_radius=18)
         pygame.draw.rect(surface, (234, 224, 241), grid_rect, width=2, border_radius=18)
 
-        explored_set = set(self.result.explored[:self.expanded_count])
-        current = self.result.explored[self.expanded_count - 1] if self.expanded_count else None
-        revealed_path = self.result.path[:self.path_count]
+        result = self.result
+        explored_set = set(result.explored[:self.expanded_count]) if result else set()
+        current = result.explored[self.expanded_count - 1] if result and self.expanded_count else None
+        revealed_path = result.path[:self.path_count] if result else ()
         revealed_path_set = set(revealed_path)
 
         for row in range(SIZE):
@@ -248,8 +256,6 @@ class LaberintoVisual:
                 pygame.draw.rect(surface, color, rect)
                 pygame.draw.rect(surface, GRID_LINE, rect, width=1)
 
-                if pos == START and not revealed_path:
-                    self._draw_text(surface, self.heading_font, "N", INK, (rect.x + 15, rect.y + 8))
                 if pos == GOAL:
                     apple_center = (rect.right - 12, rect.y + 13)
                     pygame.draw.circle(surface, FOOD, apple_center, 8)
@@ -257,23 +263,29 @@ class LaberintoVisual:
                                         (apple_center[0] + 1, apple_center[1] - 11, 8, 4))
 
         # Neurito follows the route only after the search has finished expanding.
-        if revealed_path:
+        if result is None:
+            mouse_cell = None
+        elif revealed_path:
             mouse_cell = revealed_path[-1]
         elif current is not None:
             mouse_cell = current
         else:
             mouse_cell = START
-        row, col = mouse_cell
-        center = (GRID_X + col * CELL + CELL // 2, GRID_Y + row * CELL + CELL // 2)
-        pygame.draw.circle(surface, (87, 179, 133), center, 14)
-        pygame.draw.circle(surface, (255, 255, 255), (center[0] - 5, center[1] - 3), 2)
-        pygame.draw.circle(surface, (255, 255, 255), (center[0] + 5, center[1] - 3), 2)
-        pygame.draw.arc(surface, INK, (center[0] - 6, center[1] - 1, 12, 9), 0.2, 2.9, 2)
+        if mouse_cell is None:
+            rect = pygame.Rect(GRID_X, GRID_Y, CELL, CELL)
+            self._draw_text(surface, self.heading_font, "N", INK, (rect.x + 15, rect.y + 8))
+        else:
+            row, col = mouse_cell
+            center = (GRID_X + col * CELL + CELL // 2, GRID_Y + row * CELL + CELL // 2)
+            pygame.draw.circle(surface, (87, 179, 133), center, 14)
+            pygame.draw.circle(surface, (255, 255, 255), (center[0] - 5, center[1] - 3), 2)
+            pygame.draw.circle(surface, (255, 255, 255), (center[0] + 5, center[1] - 3), 2)
+            pygame.draw.arc(surface, INK, (center[0] - 6, center[1] - 1, 12, 9), 0.2, 2.9, 2)
 
         panel = pygame.Rect(650, 112, 500, 590)
         pygame.draw.rect(surface, PAPER, panel, border_radius=22)
         pygame.draw.rect(surface, (234, 224, 241), panel, width=2, border_radius=22)
-        self._draw_text(surface, self.heading_font, "Elige una búsqueda", INK, (674, 119))
+        self._draw_text(surface, self.heading_font, "Simula un algoritmo", INK, (674, 119))
         for algorithm, rect in self.buttons.items():
             color = ALGO_COLORS[algorithm]
             pygame.draw.rect(surface, color if algorithm == self.algorithm else (244, 239, 248),
@@ -281,42 +293,54 @@ class LaberintoVisual:
             self._draw_text(surface, self.body_font, algorithm,
                             (255, 255, 255) if algorithm == self.algorithm else INK,
                             (rect.x + 48, rect.y + 12))
-        self._draw_text(surface, self.small_font, DESCRIPTIONS[self.algorithm], MUTED, (674, 207))
+        if self.algorithm is None:
+            description = "Haz clic en BFS, DFS o A* para iniciar la simulación."
+            status = "Sin simulación"
+        else:
+            description = DESCRIPTIONS[self.algorithm]
+            status = "Explorando…" if self.playing else f"{self.algorithm} terminó"
+        self._draw_text(surface, self.small_font, description, MUTED, (674, 207))
+        self._draw_text(surface, self.small_font, status,
+                        ALGO_COLORS.get(self.algorithm, MUTED), (674, 242))
 
-        expanded_total = len(self.result.explored)
-        route_length = max(0, len(self.result.path) - 1)
-        self._draw_text(surface, self.body_font,
-                        f"Celdas expandidas: {self.expanded_count} / {expanded_total}", INK, (674, 267))
-        self._draw_text(surface, self.body_font,
-                        f"Longitud de la ruta: {route_length} pasos", INK, (674, 301))
-        self._draw_text(surface, self.body_font,
-                        f"Frontera máxima: {self.result.max_frontier} celdas", INK, (674, 335))
+        if result is None:
+            self._draw_text(surface, self.body_font, "Celdas expandidas: —", INK, (674, 280))
+            self._draw_text(surface, self.body_font, "Longitud de la ruta: —", INK, (674, 312))
+            self._draw_text(surface, self.body_font, "Frontera máxima: —", INK, (674, 344))
+        else:
+            expanded_total = len(result.explored)
+            route_length = max(0, len(result.path) - 1)
+            self._draw_text(surface, self.body_font,
+                            f"Celdas expandidas: {self.expanded_count} / {expanded_total}", INK, (674, 280))
+            self._draw_text(surface, self.body_font,
+                            f"Longitud de la ruta: {route_length} pasos", INK, (674, 312))
+            self._draw_text(surface, self.body_font,
+                            f"Frontera máxima: {result.max_frontier} celdas", INK, (674, 344))
         self._draw_text(surface, self.small_font,
                         f"Laberinto fijo · semilla {MAZE_SEED} · movimientos de costo 1", MUTED, (674, 375))
 
         pygame.draw.line(surface, (232, 224, 238), (674, 410), (1125, 410), 2)
-        self._draw_text(surface, self.heading_font, "¿Cuál conviene más?", INK, (674, 430))
-        bfs_result = search(MAZE, "BFS")
-        dfs_result = search(MAZE, "DFS")
-        astar_result = search(MAZE, "A*")
+        self._draw_text(surface, self.body_font, "Comparación de este laberinto", INK, (674, 424))
+        for index, algorithm in enumerate(("A*", "BFS", "DFS")):
+            expanded, steps, _frontier = COMPARISON[algorithm]
+            self._draw_text(surface, self.small_font,
+                            f"{algorithm}: {steps} pasos / {expanded} celdas expandidas",
+                            ALGO_COLORS[algorithm], (674, 459 + index * 24))
         self._draw_text(surface, self.small_font,
-                        f"A*: {len(astar_result.path) - 1} pasos, {len(astar_result.explored)} celdas.",
-                        MUTED, (674, 468))
-        self._draw_text(surface, self.small_font,
-                        f"BFS: {len(bfs_result.path) - 1} pasos, {len(bfs_result.explored)} celdas.",
-                        MUTED, (674, 493))
-        self._draw_text(surface, self.small_font,
-                        f"DFS: {len(dfs_result.path) - 1} pasos, {len(dfs_result.explored)} celdas.",
-                        MUTED, (674, 518))
-        self._draw_text(surface, self.small_font,
-                        "Mejor aquí: A*, ruta óptima con menos expansiones.", INK, (674, 543))
+                        "Recomendación: A* da la ruta más corta con menos exploración.", INK, (674, 531))
 
-        self._draw_text(surface, self.small_font,
-                        "Espacio: pausar / continuar · R: reiniciar · 1/2/3: elegir",
-                        MUTED, (674, 602))
-        self._draw_text(surface, self.small_font,
-                        "BFS y A* son óptimos con pasos de igual costo.",
-                        MUTED, (674, 629))
+        self._draw_text(surface, self.body_font, "Leyenda del tablero", INK, (674, 559))
+        legend_items = (
+            (674, 592, WALL, "Muro"), (874, 592, (255, 255, 255), "Libre"),
+            (674, 618, VISITED, "Explorada"), (874, 618, CURRENT, "Posición actual"),
+            (674, 644, PATH, "Ruta final"), (874, 644, START_COLOR, "Inicio / Neurito"),
+            (674, 670, FOOD, "Comida"),
+        )
+        for x, y, color, label in legend_items:
+            swatch = pygame.Rect(x, y, 16, 16)
+            pygame.draw.rect(surface, color, swatch, border_radius=4)
+            pygame.draw.rect(surface, (214, 205, 224), swatch, width=1, border_radius=4)
+            self._draw_text(surface, self.tiny_font, label, MUTED, (x + 23, y + 2))
         pygame.draw.rect(surface, (238, 229, 255), self.back_rect, border_radius=15)
         self._draw_text(surface, self.body_font, "← Volver al laboratorio", INK,
                         (self.back_rect.x + 45, self.back_rect.y + 10))
