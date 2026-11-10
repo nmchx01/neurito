@@ -20,29 +20,41 @@ También puedes instalar las dependencias con `pip install numpy pygame-ce` y ej
 - Teclas **1 / 2 / 3** suben hambre, energía y aburrimiento; **Q / W / E** las bajan. **R** genera un estado al azar, **N** reinicia y **Esc** cierra.
 - Las barras de la derecha muestran la probabilidad que Softmax asigna a cada acción. La acción con el porcentaje mayor es la predicción.
 
-## Apartado visual: Neurito busca comida en un laberinto 12 × 12
+## Neurito encuentra comida con BFS, DFS y A*
 
-En la ventana principal, pulsa **Laberinto 12×12** o la tecla **L**. Neurito debe llegar desde la esquina superior izquierda hasta la comida de la esquina inferior derecha. El tablero muestra las celdas exploradas y anima la ruta final.
+Este experimento visual compara tres algoritmos de búsqueda en un laberinto de **12 × 12**. Neurito empieza en la esquina superior izquierda y busca la comida en la esquina inferior derecha. Los algoritmos recorren el mismo mapa, con movimientos arriba, derecha, abajo e izquierda; cada movimiento cuesta un paso.
 
-Al abrir el apartado, el tablero queda quieto y muestra la leyenda y la comparación de resultados. La búsqueda solo comienza al hacer clic en **BFS**, **DFS** o **A***. Usa **Espacio** para pausar o continuar, **R** para reiniciar la búsqueda seleccionada y **Esc** para volver al laboratorio. También puedes abrir este apartado directamente con:
+### Ejecutar y controlar la simulación
+
+En la ventana principal, pulsa **Laberinto 12×12** o la tecla **L**. El tablero comienza quieto: una simulación se inicia únicamente al hacer clic en **BFS**, **DFS** o **A***. La animación colorea las celdas conforme el algoritmo las explora y luego revela la ruta encontrada. La leyenda identifica muros, celdas libres, celdas exploradas, posición actual, ruta, inicio y comida.
+
+El panel muestra el progreso y tres medidas: **celdas expandidas** (celdas que el algoritmo procesó), **pasos de la ruta** (movimientos desde el inicio hasta la comida) y **frontera máxima** (mayor cantidad de elementos pendientes en la cola, pila o estructura de búsqueda). **Espacio** pausa o continúa; **R** reinicia la búsqueda seleccionada; **Esc** vuelve al laboratorio.
+
+También puedes abrir el visualizador directamente:
 
 ```bash
 uv run laberinto.py
 ```
 
-BFS, DFS y A* son algoritmos de **búsqueda**; no son métodos de entrenamiento de la red neuronal. El mapa se genera de forma reproducible con semilla 16319 y los tres algoritmos recorren el mismo tablero.
+BFS, DFS y A* son algoritmos de **búsqueda**; no entrenan la red neuronal de Neurito. El laberinto se genera de forma reproducible con semilla **16319**. Las cifras siguientes son de una ejecución de cada algoritmo sobre ese mismo mapa.
 
-### Comparación y recomendación
+### Cómo buscan
 
-En este tablero, cada movimiento cuesta lo mismo:
+- **BFS (búsqueda en anchura)** visita el mapa por capas usando una cola. Con costos iguales, garantiza una ruta con el menor número de pasos.
+- **DFS (búsqueda en profundidad)** sigue un camino mientras puede y retrocede cuando llega a un callejón sin salida; usa una pila y no garantiza la ruta más corta.
+- **A*** prioriza la suma `g + h`: `g` es el costo recorrido y `h` estima la distancia restante mediante la distancia Manhattan. En esta cuadrícula de cuatro direcciones y pasos de costo 1, esa estimación no sobrepasa la distancia real, por lo que A* puede encontrar una ruta óptima.
 
-| Algoritmo | Celdas expandidas | Pasos de la ruta | Frontera máxima |
-|---|---:|---:|---:|
-| BFS | 109 | 24 | 11 |
-| DFS | 80 | 66 | 29 |
-| A* | 59 | 24 | 18 |
+### Datos de las simulaciones
 
-**A* es la mejor opción para este laberinto cuando buscamos una ruta corta explorando menos.** Prioriza las celdas con menor suma de `g + h`: `g` es la distancia recorrida y `h` estima lo que falta con la distancia Manhattan (pasos horizontales y verticales). Como cada movimiento cuesta 1 y esta estimación nunca cuenta más pasos de los que realmente faltan, A* encuentra aquí una ruta óptima de **24 pasos**, igual que BFS. La diferencia es el trabajo: A* expande **59 celdas**, frente a **109 de BFS** (50 menos, alrededor de un 46%) y **80 de DFS**. DFS termina con una ruta de **66 pasos**, porque no garantiza la más corta. Por eso A* ofrece en este mapa la misma longitud óptima que BFS con menos celdas exploradas; no significa que siempre sea la mejor en cualquier mapa o según cualquier objetivo.
+| Algoritmo | Celdas expandidas | Pasos hasta la comida | Frontera máxima | Resultado |
+|---|---:|---:|---:|---|
+| BFS | 109 | 24 | 11 | Ruta más corta |
+| DFS | 80 | 66 | 29 | Ruta encontrada, pero 42 pasos más larga |
+| A* | 59 | 24 | 18 | Ruta más corta con menos expansiones |
+
+En este mapa, **A* es la mejor opción si buscamos la ruta más corta con menos exploración**. Encuentra los mismos **24 pasos** que BFS, pero expande **50 celdas menos**: 59 frente a 109, aproximadamente **46% menos**. También expande 21 celdas menos que DFS y su ruta es 42 pasos más corta. BFS sigue siendo óptimo, pero explora más celdas aquí; DFS explora menos que BFS, aunque llega a la comida por una ruta mucho más larga.
+
+Esta conclusión describe solamente el laberinto fijo de la prueba. El número de expansiones, el tamaño de la frontera y la ruta de DFS pueden cambiar con el mapa y el orden en que se consideran los vecinos; A* no es automáticamente el mejor para todos los problemas.
 
 ## Regla y datos del experimento
 
