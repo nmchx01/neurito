@@ -42,7 +42,7 @@ En este tablero, cada movimiento cuesta lo mismo:
 | DFS | 80 | 66 | 29 |
 | A* | 59 | 24 | 18 |
 
-**A* es la mejor opción en este laberinto:** encuentra una ruta óptima de 24 pasos y expande menos celdas que BFS y DFS. BFS también garantiza una ruta más corta cuando todos los movimientos cuestan lo mismo, pero aquí explora más. DFS explora menos que BFS en este mapa, aunque su ruta tiene 42 pasos adicionales; en general no garantiza encontrar la ruta más corta. La recomendación depende del objetivo y del mapa: para este caso, A* combina ruta óptima con menos expansiones.
+**A* es la mejor opción para este laberinto cuando buscamos una ruta corta explorando menos.** Prioriza las celdas con menor suma de `g + h`: `g` es la distancia recorrida y `h` estima lo que falta con la distancia Manhattan (pasos horizontales y verticales). Como cada movimiento cuesta 1 y esta estimación nunca cuenta más pasos de los que realmente faltan, A* encuentra aquí una ruta óptima de **24 pasos**, igual que BFS. La diferencia es el trabajo: A* expande **59 celdas**, frente a **109 de BFS** (50 menos, alrededor de un 46%) y **80 de DFS**. DFS termina con una ruta de **66 pasos**, porque no garantiza la más corta. Por eso A* ofrece en este mapa la misma longitud óptima que BFS con menos celdas exploradas; no significa que siempre sea la mejor en cualquier mapa o según cualquier objetivo.
 
 ## Regla y datos del experimento
 
