@@ -20,6 +20,30 @@ También puedes instalar las dependencias con `pip install numpy pygame-ce` y ej
 - Teclas **1 / 2 / 3** suben hambre, energía y aburrimiento; **Q / W / E** las bajan. **R** genera un estado al azar, **N** reinicia y **Esc** cierra.
 - Las barras de la derecha muestran la probabilidad que Softmax asigna a cada acción. La acción con el porcentaje mayor es la predicción.
 
+## Apartado visual: Neurito busca comida en un laberinto 12 × 12
+
+En la ventana principal, pulsa **Laberinto 12×12** o la tecla **L**. Neurito debe llegar desde la esquina superior izquierda hasta la comida de la esquina inferior derecha. El tablero muestra las celdas exploradas y anima la ruta final.
+
+Selecciona **BFS**, **DFS** o **A*** con los botones o con las teclas **1**, **2** y **3**. Usa **Espacio** para pausar o continuar, **R** para reiniciar la animación y **Esc** para volver al laboratorio. También puedes abrir este apartado directamente con:
+
+```bash
+uv run laberinto.py
+```
+
+BFS, DFS y A* son algoritmos de **búsqueda**; no son métodos de entrenamiento de la red neuronal. El mapa se genera de forma reproducible con semilla 16319 y los tres algoritmos recorren el mismo tablero.
+
+### Comparación y recomendación
+
+En este tablero, cada movimiento cuesta lo mismo:
+
+| Algoritmo | Celdas expandidas | Pasos de la ruta | Frontera máxima |
+|---|---:|---:|---:|
+| BFS | 109 | 24 | 11 |
+| DFS | 80 | 66 | 29 |
+| A* | 59 | 24 | 18 |
+
+**A* es la mejor opción en este laberinto:** encuentra una ruta óptima de 24 pasos y expande menos celdas que BFS y DFS. BFS también garantiza una ruta más corta cuando todos los movimientos cuestan lo mismo, pero aquí explora más. DFS explora menos que BFS en este mapa, aunque su ruta tiene 42 pasos adicionales; en general no garantiza encontrar la ruta más corta. La recomendación depende del objetivo y del mapa: para este caso, A* combina ruta óptima con menos expansiones.
+
 ## Regla y datos del experimento
 
 Para enseñar el concepto sin datos personales, el proyecto inventa estados con tres números entre 0 y 1. La etiqueta correcta se crea con esta regla:
