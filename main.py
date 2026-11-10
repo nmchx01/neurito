@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pygame
 
+from laberinto import LaberintoVisual
 
 WIDTH, HEIGHT = 1150, 780
 ACTIONS = ("comer", "dormir", "jugar")
@@ -108,6 +109,9 @@ def main() -> None:
     body_font = pygame.font.SysFont(font_name, 18)
     small_font = pygame.font.SysFont(font_name, 15)
     tiny_font = pygame.font.SysFont(font_name, 13)
+    laberinto_scene = LaberintoVisual(heading_font, body_font, small_font, tiny_font)
+    visual_button = pygame.Rect(867, 62, 254, 33)
+    scene = "home"
 
     train, train_y = make_dataset()
     model = train_network(train, train_y)
@@ -142,9 +146,15 @@ def main() -> None:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif scene == "maze":
+                if laberinto_scene.handle_event(event) == "home":
+                    scene = "home"
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                elif event.key == pygame.K_l:
+                    laberinto_scene.restart()
+                    scene = "maze"
                 elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3):
                     index = event.key - pygame.K_1
                     needs[index] = min(1.0, needs[index] + 0.1)
@@ -156,7 +166,10 @@ def main() -> None:
                 elif event.key == pygame.K_n:
                     needs = [0.2, 0.9, 0.2]
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if random_rect.collidepoint(event.pos):
+                if visual_button.collidepoint(event.pos):
+                    laberinto_scene.restart()
+                    scene = "maze"
+                elif random_rect.collidepoint(event.pos):
                     needs = list(np.random.default_rng().random(3))
                 elif reset_rect.collidepoint(event.pos):
                     needs = [0.2, 0.9, 0.2]
@@ -190,6 +203,12 @@ def main() -> None:
                 rect = slider_rects[active_slider]
                 needs[active_slider] = float(np.clip((event.pos[0] - rect.left) / rect.width, 0, 1))
 
+        if scene == "maze":
+            laberinto_scene.update(clock.tick(30))
+            laberinto_scene.draw(screen)
+            pygame.display.flip()
+            continue
+
         probs = probabilities_for(needs, model)
         action = ACTIONS[int(np.argmax(probs))]
         is_calm = needs[0] < 0.4 and needs[1] > 0.6 and needs[2] < 0.4
@@ -208,6 +227,9 @@ def main() -> None:
         draw_text(screen, title_font, "¡Hola! Soy Neurito", INK, (30, 22))
         draw_text(screen, body_font, "Mueve mis necesidades y descubre qué acción elige mi cerebro.", MUTED, (32, 62))
         draw_text(screen, small_font, "PEQUEÑO LABORATORIO DE IA", (161, 116, 196), (891, 39))
+        pygame.draw.rect(screen, (238, 229, 255), visual_button, border_radius=13)
+        draw_text(screen, small_font, "LABERINTO 12×12 · L", INK,
+                  visual_button.center, center=True)
 
         left_card = pygame.Rect(28, 105, 510, 420)
         right_card = pygame.Rect(552, 105, 570, 420)
@@ -283,7 +305,7 @@ def main() -> None:
             pygame.draw.rect(screen, help_color, help_rect, border_radius=20)
             draw_text(screen, small_font, help_title, INK, (help_rect.centerx, help_rect.y + 21), center=True)
             draw_text(screen, tiny_font, help_body, MUTED, (help_rect.centerx, help_rect.y + 48), center=True)
-        draw_text(screen, tiny_font, "1/2/3 = subir   ·   Q/W/E = bajar   ·   R = azar   ·   N = reiniciar   ·   rueda = ajustar bajo el puntero   ·   Esc = salir", MUTED, (575, 721), center=True)
+        draw_text(screen, tiny_font, "1/2/3 = subir   ·   Q/W/E = bajar   ·   R = azar   ·   L = laberinto BFS/DFS/A*   ·   Esc = salir", MUTED, (575, 721), center=True)
 
         pygame.display.flip()
         clock.tick(30)

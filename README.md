@@ -20,6 +20,42 @@ También puedes instalar las dependencias con `pip install numpy pygame-ce` y ej
 - Teclas **1 / 2 / 3** suben hambre, energía y aburrimiento; **Q / W / E** las bajan. **R** genera un estado al azar, **N** reinicia y **Esc** cierra.
 - Las barras de la derecha muestran la probabilidad que Softmax asigna a cada acción. La acción con el porcentaje mayor es la predicción.
 
+## Neurito encuentra comida con BFS, DFS y A*
+
+Este experimento visual compara tres algoritmos de búsqueda en un laberinto de **12 × 12**. Neurito empieza en la esquina superior izquierda y busca la comida en la esquina inferior derecha. Los algoritmos recorren el mismo mapa, con movimientos arriba, derecha, abajo e izquierda; cada movimiento cuesta un paso.
+
+### Ejecutar y controlar la simulación
+
+En la ventana principal, pulsa **Laberinto 12×12** o la tecla **L**. El tablero comienza quieto: una simulación se inicia únicamente al hacer clic en **BFS**, **DFS** o **A***. La animación colorea las celdas conforme el algoritmo las explora y luego revela la ruta encontrada. La leyenda identifica muros, celdas libres, celdas exploradas, posición actual, ruta, inicio y comida.
+
+El panel muestra el progreso y tres medidas: **celdas expandidas** (celdas que el algoritmo procesó), **pasos de la ruta** (movimientos desde el inicio hasta la comida) y **frontera máxima** (mayor cantidad de elementos pendientes en la cola, pila o estructura de búsqueda). **Espacio** pausa o continúa; **R** reinicia la búsqueda seleccionada; **Esc** vuelve al laboratorio.
+
+También puedes abrir el visualizador directamente:
+
+```bash
+uv run laberinto.py
+```
+
+BFS, DFS y A* son algoritmos de **búsqueda**; no entrenan la red neuronal de Neurito. El laberinto se genera de forma reproducible con semilla **16319**. Las cifras siguientes son de una ejecución de cada algoritmo sobre ese mismo mapa.
+
+### Cómo buscan
+
+- **BFS (búsqueda en anchura)** visita el mapa por capas usando una cola. Con costos iguales, garantiza una ruta con el menor número de pasos.
+- **DFS (búsqueda en profundidad)** sigue un camino mientras puede y retrocede cuando llega a un callejón sin salida; usa una pila y no garantiza la ruta más corta.
+- **A*** prioriza la suma `g + h`: `g` es el costo recorrido y `h` estima la distancia restante mediante la distancia Manhattan. En esta cuadrícula de cuatro direcciones y pasos de costo 1, esa estimación no sobrepasa la distancia real, por lo que A* puede encontrar una ruta óptima.
+
+### Datos de las simulaciones
+
+| Algoritmo | Celdas expandidas | Pasos hasta la comida | Frontera máxima | Resultado |
+|---|---:|---:|---:|---|
+| BFS | 109 | 24 | 11 | Ruta más corta |
+| DFS | 80 | 66 | 29 | Ruta encontrada, pero 42 pasos más larga |
+| A* | 59 | 24 | 18 | Ruta más corta con menos expansiones |
+
+En este mapa, **A* es la mejor opción si buscamos la ruta más corta con menos exploración**. Encuentra los mismos **24 pasos** que BFS, pero expande **50 celdas menos**: 59 frente a 109, aproximadamente **46% menos**. También expande 21 celdas menos que DFS y su ruta es 42 pasos más corta. BFS sigue siendo óptimo, pero explora más celdas aquí; DFS explora menos que BFS, aunque llega a la comida por una ruta mucho más larga.
+
+Esta conclusión describe solamente el laberinto fijo de la prueba. El número de expansiones, el tamaño de la frontera y la ruta de DFS pueden cambiar con el mapa y el orden en que se consideran los vecinos; A* no es automáticamente el mejor para todos los problemas.
+
 ## Regla y datos del experimento
 
 Para enseñar el concepto sin datos personales, el proyecto inventa estados con tres números entre 0 y 1. La etiqueta correcta se crea con esta regla:
